@@ -57,7 +57,10 @@
 			<scope>test</scope>
 		</dependency>
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> feature/spring-security-cors-config
 				<!-- https://mvnrepository.com/artifact/io.jsonwebtoken/jjwt-api -->
 		<dependency>
 		    <groupId>io.jsonwebtoken</groupId>
@@ -80,7 +83,10 @@
 		    <version>0.11.2</version>
 		    <scope>runtime</scope>
 		</dependency>
+<<<<<<< HEAD
 >>>>>>> 7b26e13 (Add Spring Security configuration and CORS settings)
+=======
+>>>>>>> feature/spring-security-cors-config
 	</dependencies>
 
 	<build>
