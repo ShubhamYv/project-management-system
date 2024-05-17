@@ -51,7 +51,7 @@ public class ProjectServiceImpl implements ProjectService {
 
 	@Override
 	public List<Project> getProjectByTeam(User user, String category, String tag) {
-		List<Project> projects = projectRepository.findByTeamContainsOrOwner(user, user);
+		List<Project> projects = projectRepository.findByTeamContainingOrOwner(user, user);
 
 		// Filter projects based on category if provided
 		if (category != null) {
@@ -124,7 +124,7 @@ public class ProjectServiceImpl implements ProjectService {
 	@Override
 	public List<Project> searchProject(String keyword, User user) throws Exception {
 		String partialName = "%" + keyword + "%";
-		return projectRepository.findByNameContainsAndTeamContains(partialName, user);
+		return projectRepository.findByNameContainingAndTeamContaining(partialName, user);
 	}
 
 }
