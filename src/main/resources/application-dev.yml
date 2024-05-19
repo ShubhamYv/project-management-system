@@ -1,0 +1,5 @@
+spring:
+  profiles: dev
+
+  application:
+    name: project-management-system-dev
