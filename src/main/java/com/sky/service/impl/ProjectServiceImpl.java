@@ -3,8 +3,12 @@ package com.sky.service.impl;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import com.sky.dto.ChatDTO;
+import com.sky.dto.ProjectDTO;
+import com.sky.dto.UserDTO;
 import com.sky.entity.Chat;
 import com.sky.entity.Project;
 import com.sky.entity.User;
@@ -16,67 +20,73 @@ import com.sky.service.UserService;
 @Service
 public class ProjectServiceImpl implements ProjectService {
 
-	private ProjectRepository projectRepository;
-	private UserService userService;
-	private ChatService chatService;
+	private final ProjectRepository projectRepository;
+	private final UserService userService;
+	private final ChatService chatService;
+	private final ModelMapper modelMapper;
 
-	public ProjectServiceImpl(ProjectRepository projectRepository, UserService userService,
-			ChatService chatService) {
+	public ProjectServiceImpl(ProjectRepository projectRepository, UserService userService, ChatService chatService,
+			ModelMapper modelMapper) {
 		this.projectRepository = projectRepository;
 		this.userService = userService;
 		this.chatService = chatService;
+		this.modelMapper = modelMapper;
 	}
 
 	@Override
-	public Project createProject(Project project, User user) {
-		Project createdProject = new Project();
-		createdProject.setOwner(user);
-		createdProject.setCategory(project.getCategory());
-		createdProject.setDescription(project.getDescription());
-		createdProject.setIssues(project.getIssues());
-		createdProject.setName(project.getName());
-		createdProject.setTags(project.getTags());
-		createdProject.setTeam(project.getTeam());
+	public ProjectDTO createProject(ProjectDTO projectDTO, UserDTO userDTO) throws Exception {
+		User user = modelMapper.map(userDTO, User.class);
+		UserDTO userExistDTO = userService.findUserById(user.getId());
+		if (userExistDTO == null) {
+			throw new IllegalArgumentException("User not found with ID: " + user.getId());
+		}
+		User userExist = modelMapper.map(userExistDTO, User.class);
 
-		Project savedProject = projectRepository.save(createdProject);
+		Project project = modelMapper.map(projectDTO, Project.class);
+		project.setOwner(userExist);
 
-		// Create chat associated with the project
-		Chat chat = new Chat();
-		chat.setProject(savedProject);
-		Chat projectChat = chatService.createChat(chat);
-		savedProject.setChat(projectChat);
+		Project savedProject = projectRepository.save(project);
 
-		return savedProject;
+		// Creating a dynamic chat based on the project name
+		ChatDTO chatDTO = new ChatDTO();
+		chatDTO.setName(projectDTO.getName());
+		ChatDTO projectChatDTO = chatService.createChat(chatDTO);
+		savedProject.setChat(modelMapper.map(projectChatDTO, Chat.class));
+		projectRepository.save(savedProject);
+
+		return modelMapper.map(savedProject, ProjectDTO.class);
 	}
 
 	@Override
-	public List<Project> getProjectByTeam(User user, String category, String tag) {
+	public List<ProjectDTO> getProjectByTeam(UserDTO userDTO, String category, String tag) throws Exception {
+		User user = modelMapper.map(userDTO, User.class);
 		List<Project> projects = projectRepository.findByTeamContainingOrOwner(user, user);
 
-		// Filter projects based on category if provided
 		if (category != null) {
 			projects = projects.stream().filter(project -> category.equals(project.getCategory()))
 					.collect(Collectors.toList());
 		}
 
-		// Filter projects based on tag if provided
 		if (tag != null) {
 			projects = projects.stream().filter(project -> project.getTags().contains(tag))
 					.collect(Collectors.toList());
 		}
 
-		return projects;
+		return projects.stream().map(project -> modelMapper.map(project, ProjectDTO.class))
+				.collect(Collectors.toList());
 	}
 
 	@Override
-	public Project getProjectById(Long projectId) throws Exception {
-		return projectRepository.findById(projectId)
-				.orElseThrow(() -> new Exception("Project not found with id: " + projectId));
+	public ProjectDTO getProjectById(Long projectId) throws Exception {
+		Project project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new Exception("Project not found with ID: " + projectId));
+		return modelMapper.map(project, ProjectDTO.class);
 	}
 
 	@Override
 	public void deleteProject(Long projectId, Long userId) throws Exception {
-		Project project = getProjectById(projectId);
+		Project project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new Exception("Project not found with ID: " + projectId));
 		if (!project.getOwner().getId().equals(userId)) {
 			throw new Exception("You are not authorized to delete this project.");
 		}
@@ -84,47 +94,66 @@ public class ProjectServiceImpl implements ProjectService {
 	}
 
 	@Override
-	public Project updateProject(Project updatedProject, Long projectId) throws Exception {
-		Project project = getProjectById(projectId);
-		project.setCategory(updatedProject.getCategory());
-		project.setName(updatedProject.getName());
-		project.setDescription(updatedProject.getDescription());
-		project.setTags(updatedProject.getTags());
-		return projectRepository.save(project);
+	public ProjectDTO updateProject(ProjectDTO updatedProjectDTO, Long projectId) throws Exception {
+		Project project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new Exception("Project not found with ID: " + projectId));
+
+		project.setCategory(updatedProjectDTO.getCategory());
+		project.setName(updatedProjectDTO.getName());
+		project.setDescription(updatedProjectDTO.getDescription());
+		project.setTags(updatedProjectDTO.getTags());
+
+		Project savedProject = projectRepository.save(project);
+		return modelMapper.map(savedProject, ProjectDTO.class);
 	}
 
 	@Override
 	public void addUserToProject(Long projectId, Long userId) throws Exception {
-		Project project = getProjectById(projectId);
-		User user = userService.findUserById(userId);
+		Project project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new Exception("Project not found with ID: " + projectId));
+		UserDTO userDTO = userService.findUserById(userId);
+		if (userDTO == null) {
+			throw new IllegalArgumentException("User not found with ID: " + userId);
+		}
+		User user = modelMapper.map(userDTO, User.class);
 		if (!project.getTeam().contains(user)) {
-			project.getChat().getUsers().add(user);
 			project.getTeam().add(user);
+			project.getChat().getUsers().add(user);
 		}
 		projectRepository.save(project);
 	}
 
 	@Override
 	public void removeUserFromProject(Long projectId, Long userId) throws Exception {
-		Project project = getProjectById(projectId);
-		User user = userService.findUserById(userId);
-		if (!project.getTeam().contains(user)) {
-			project.getChat().getUsers().add(user);
+		Project project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new Exception("Project not found with ID: " + projectId));
+		UserDTO userDTO = userService.findUserById(userId);
+		if (userDTO == null) {
+			throw new IllegalArgumentException("User not found with ID: " + userId);
+		}
+		User user = modelMapper.map(userDTO, User.class);
+		if (project.getTeam().contains(user)) {
 			project.getTeam().remove(user);
+			// Remove user from chat participants
+			project.getChat().getUsers().removeIf(u -> u.getId().equals(userId));
 		}
 		projectRepository.save(project);
 	}
 
 	@Override
-	public Chat getChatByProjectId(Long projectId) throws Exception {
-		Project project = getProjectById(projectId);
-		return project.getChat();
+	public ChatDTO getChatByProjectId(Long projectId) throws Exception {
+		Project project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new Exception("Project not found with ID: " + projectId));
+		return modelMapper.map(project.getChat(), ChatDTO.class);
 	}
 
 	@Override
-	public List<Project> searchProject(String keyword, User user) throws Exception {
+	public List<ProjectDTO> searchProject(String keyword, UserDTO userDTO) throws Exception {
 		String partialName = "%" + keyword + "%";
-		return projectRepository.findByNameContainingAndTeamContaining(partialName, user);
+		User user = modelMapper.map(userDTO, User.class);
+		List<Project> projects = projectRepository.findByNameContainingAndTeamContaining(partialName, user);
+		return projects.stream().map(project -> modelMapper.map(project, ProjectDTO.class))
+				.collect(Collectors.toList());
 	}
 
 }

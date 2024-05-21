@@ -24,24 +24,24 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Project {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	private Long id;
-	private String name;
-	private String description;
-	private String category;
-	private List<String> tags = new ArrayList<>();
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+    private String name;
+    private String description;
+    private String category;
+    private List<String> tags = new ArrayList<>();
 
-	@JsonIgnore
-	@OneToOne(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
-	private Chat chat;
+    @JsonIgnore
+    @OneToOne(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Chat chat;
 
-	@ManyToOne
-	private User owner;
+    @ManyToOne
+    private User owner;
 
-	@OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<Issue> issues = new ArrayList<>();
-	
-	@ManyToMany
-	private List<User> team= new ArrayList<>();
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Issue> issues = new ArrayList<>();
+
+    @ManyToMany
+    private List<User> team = new ArrayList<>();
 }
