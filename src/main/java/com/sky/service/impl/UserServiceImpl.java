@@ -1,8 +1,10 @@
 package com.sky.service.impl;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import com.sky.config.JwtProvider;
+import com.sky.dto.UserDTO;
 import com.sky.entity.User;
 import com.sky.repository.UserRepository;
 import com.sky.service.UserService;
@@ -10,36 +12,41 @@ import com.sky.service.UserService;
 @Service
 public class UserServiceImpl implements UserService {
 
-	private UserRepository userRepository;
+	private final UserRepository userRepository;
+	private final ModelMapper modelMapper;
 
-	public UserServiceImpl(UserRepository userRepository) {
+	public UserServiceImpl(UserRepository userRepository, ModelMapper modelMapper) {
 		this.userRepository = userRepository;
+		this.modelMapper = modelMapper;
 	}
 
 	@Override
-	public User findUserProfileByJwt(String jwt) throws Exception {
-		return findUserByEmail(JwtProvider.getEmailFromJwtToken(jwt));
+	public UserDTO findUserProfileByJwt(String jwt) throws Exception {
+		String email = JwtProvider.getEmailFromJwtToken(jwt);
+		return findUserByEmail(email);
 	}
 
 	@Override
-	public User findUserByEmail(String email) throws Exception {
+	public UserDTO findUserByEmail(String email) throws Exception {
 		User user = userRepository.findByEmail(email);
-		if (null == user) {
+		if (user == null) {
 			throw new Exception("User not found with email: " + email);
 		}
-		return user;
+		return modelMapper.map(user, UserDTO.class);
 	}
 
 	@Override
-	public User findUserById(Long userId) throws Exception {
-		return userRepository.findById(userId)
+	public UserDTO findUserById(Long userId) throws Exception {
+		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new Exception("User not found with id: " + userId));
+		return modelMapper.map(user, UserDTO.class);
 	}
 
 	@Override
-	public User updateUsersProjectSize(User user, int number) {
-		user.setProjectSize(user.getProjectSize() + number);
-		return userRepository.save(user);
+	public UserDTO updateUsersProjectSize(UserDTO userDTO, int number) {
+		userDTO.setProjectSize(userDTO.getProjectSize() + number);
+		User user = modelMapper.map(userDTO, User.class);
+		user = userRepository.save(user);
+		return modelMapper.map(user, UserDTO.class);
 	}
-
 }

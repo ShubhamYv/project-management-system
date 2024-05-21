@@ -1,8 +1,8 @@
 package com.sky.service;
 
-import com.sky.entity.Chat;
+import com.sky.dto.ChatDTO;
 
 public interface ChatService {
 
-	Chat createChat(Chat chat);
+	ChatDTO createChat(ChatDTO chatDTO);
 }
