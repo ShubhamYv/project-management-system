@@ -1,14 +1,14 @@
 package com.sky.service;
 
-import com.sky.entity.User;
+import com.sky.dto.UserDTO;
 
 public interface UserService {
 
-	User findUserProfileByJwt(String jwt) throws Exception;
+	UserDTO findUserProfileByJwt(String jwt) throws Exception;
 	
-	User findUserByEmail(String email) throws Exception;
+	UserDTO findUserByEmail(String email) throws Exception;
 	
-	User findUserById(Long userId) throws Exception;
+	UserDTO findUserById(Long userId) throws Exception;
 	
-	User updateUsersProjectSize(User user, int number);
+	UserDTO updateUsersProjectSize(UserDTO userDTO, int number);
 }

@@ -2,24 +2,16 @@ package com.sky.controller;
 
 import java.util.List;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.sky.entity.Chat;
-import com.sky.entity.Invitation;
-import com.sky.entity.Project;
-import com.sky.entity.User;
+import com.sky.dto.ChatDTO;
+import com.sky.dto.ProjectDTO;
+import com.sky.dto.UserDTO;
 import com.sky.pojo.ProjectInvitationRequest;
+import com.sky.pojo.ProjectRequest;
 import com.sky.service.InvitationService;
 import com.sky.service.ProjectService;
 import com.sky.service.UserService;
@@ -28,97 +20,99 @@ import com.sky.service.UserService;
 @RequestMapping("/api/projects")
 public class ProjectController {
 
-	private ProjectService projectService;
-	private UserService userService;
-	private InvitationService invitationService;
+    private final ProjectService projectService;
+    private final UserService userService;
+    private final InvitationService invitationService;
+    private final ModelMapper modelMapper;
 
-	public ProjectController(ProjectService projectService, UserService userService,
-			InvitationService invitationService) {
-		this.projectService = projectService;
-		this.userService = userService;
-		this.invitationService = invitationService;
-	}
-	
-	@PostMapping
-	public ResponseEntity<Project> createProject(@RequestBody Project project,
-			@RequestHeader("Authorization") String jwt) throws Exception {
-		User user = userService.findUserProfileByJwt(jwt);
-		Project createdProject = projectService.createProject(project, user);
-		return new ResponseEntity<>(createdProject, HttpStatus.CREATED);
-	}
+    public ProjectController(ProjectService projectService, UserService userService,
+                             InvitationService invitationService, ModelMapper modelMapper) {
+        this.projectService = projectService;
+        this.userService = userService;
+        this.invitationService = invitationService;
+        this.modelMapper = modelMapper;
+    }
 
-	@GetMapping
-	public ResponseEntity<List<Project>> getProjects(
-			@RequestParam(required = false) String category,
-			@RequestParam(required = false) String tag,
-			@RequestHeader("Authorization") String jwt) throws Exception {
+    @PostMapping
+    public ResponseEntity<ProjectDTO> createProject(
+    		@RequestBody ProjectRequest projectRequest,
+    		@RequestHeader("Authorization") String jwt) throws Exception {
 
-		User user = userService.findUserProfileByJwt(jwt);
-		List<Project> projects = projectService.getProjectByTeam(user, category, tag);
-		return new ResponseEntity<>(projects, HttpStatus.OK);
-	}
+        ProjectDTO projectDTO = modelMapper.map(projectRequest, ProjectDTO.class);
+        UserDTO userDTO = userService.findUserProfileByJwt(jwt);
+        ProjectDTO createdProjectDTO = projectService.createProject(projectDTO, userDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdProjectDTO);
+    }
 
-	@GetMapping("{projectId}")
-	public ResponseEntity<Project> getProjectById(@PathVariable Long projectId,
-			@RequestHeader("Authorization") String jwt) throws Exception {
-		User user = userService.findUserProfileByJwt(jwt);
-		Project project = projectService.getProjectById(projectId);
-		return new ResponseEntity<>(project, HttpStatus.OK);
-	}
+    @GetMapping
+    public ResponseEntity<List<ProjectDTO>> getProjects(
+    		@RequestParam(required = false) String category,
+    		@RequestParam(required = false) String tag,
+    		@RequestHeader("Authorization") String jwt) throws Exception {
 
-	@PutMapping("/{projectId}")
-	public ResponseEntity<Project> updateProject(
-			@RequestBody Project project,
-			@PathVariable Long projectId,
-			@RequestHeader("Authorization") String jwt) throws Exception {
-		User user = userService.findUserProfileByJwt(jwt);
-		Project updatedProject = projectService.updateProject(project, projectId);
-		return new ResponseEntity<>(updatedProject, HttpStatus.CREATED);
-	}
+        UserDTO userDTO = userService.findUserProfileByJwt(jwt);
+        List<ProjectDTO> projectDTOs = projectService.getProjectByTeam(userDTO, category, tag);
+        return ResponseEntity.ok(projectDTOs);
+    }
 
-	@DeleteMapping("{projectId}")
-	public ResponseEntity<String> deleteProject(@PathVariable Long projectId,
-			@RequestHeader("Authorization") String jwt) throws Exception {
-		User user = userService.findUserProfileByJwt(jwt);
-		projectService.deleteProject(projectId, user.getId());
-		return new ResponseEntity<>("Project " + projectId + " deleted successfull", HttpStatus.OK);
-	}
+    @GetMapping("{projectId}")
+    public ResponseEntity<ProjectDTO> getProjectById(
+    		@PathVariable Long projectId,
+    		@RequestHeader("Authorization") String jwt) throws Exception {
+        ProjectDTO projectDTO = projectService.getProjectById(projectId);
+        return ResponseEntity.ok(projectDTO);
+    }
 
-	@GetMapping("/search")
-	public ResponseEntity<List<Project>> searchProjects(
-			@RequestParam(required = false) String keyword,
-			@RequestHeader("Authorization") String jwt) throws Exception {
-		User user = userService.findUserProfileByJwt(jwt);
-		List<Project> projects = projectService.searchProject(keyword, user);
-		return new ResponseEntity<>(projects, HttpStatus.OK);
-	}
+    @PutMapping("/{projectId}")
+    public ResponseEntity<ProjectDTO> updateProject(
+    		@RequestBody ProjectDTO projectDTO,
+    		@PathVariable Long projectId,
+    		@RequestHeader("Authorization") String jwt) throws Exception {
+        ProjectDTO updatedProjectDTO = projectService.updateProject(projectDTO, projectId);
+        return ResponseEntity.ok(updatedProjectDTO);
+    }
 
-	@GetMapping("/{projectId}/chat")
-	public ResponseEntity<Chat> getChatProjectId(
-			@PathVariable Long projectId,
-			@RequestHeader("Authorization") String jwt) throws Exception {
-		User user = userService.findUserProfileByJwt(jwt);
-		Chat chat = projectService.getChatByProjectId(projectId);
-		return new ResponseEntity<>(chat, HttpStatus.OK);
-	}
-	
-	@PostMapping("/invite")
-	public ResponseEntity<String> sendProjectInvitation(
-			@RequestBody ProjectInvitationRequest request,
-			@RequestHeader("Authorization") String jwt) throws Exception {
-		User user = userService.findUserProfileByJwt(jwt);
-		invitationService.sendInvitation(request.getEmail(), request.getProjectId());
-		return new ResponseEntity<>("Project invitation sent", HttpStatus.OK);
-	}
-	
-	@GetMapping("/accept_invitation")
-	public ResponseEntity<Invitation> acceptProjectInvitation(
-			@RequestBody ProjectInvitationRequest request,
-			@RequestParam String token, 
-			@RequestHeader("Authorization") String jwt) throws Exception {
-		User user = userService.findUserProfileByJwt(jwt);
-		Invitation invitation = invitationService.acceptInvitation(token, user.getId());
-		projectService.addUserToProject(invitation.getProjectId(), user.getId());
-		return new ResponseEntity<>(invitation, HttpStatus.ACCEPTED);
-	}
+    @DeleteMapping("{projectId}")
+    public ResponseEntity<String> deleteProject(
+    		@PathVariable Long projectId,
+    		@RequestHeader("Authorization") String jwt) throws Exception {
+        UserDTO userDTO = userService.findUserProfileByJwt(jwt);
+        projectService.deleteProject(projectId, userDTO.getId());
+        return ResponseEntity.ok("Project " + projectId + " deleted successfully");
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<ProjectDTO>> searchProjects(
+    		@RequestParam(required = false) String keyword,
+    		@RequestHeader("Authorization") String jwt) throws Exception {
+        UserDTO userDTO = userService.findUserProfileByJwt(jwt);
+        List<ProjectDTO> projectDTOs = projectService.searchProject(keyword, userDTO);
+        return ResponseEntity.ok(projectDTOs);
+    }
+
+    @GetMapping("/{projectId}/chat")
+    public ResponseEntity<ChatDTO> getChatProjectId(
+    		@PathVariable Long projectId,
+    		@RequestHeader("Authorization") String jwt) throws Exception {
+        ChatDTO chatDTO = projectService.getChatByProjectId(projectId);
+        return ResponseEntity.ok(chatDTO);
+    }
+
+    @PostMapping("/invite")
+    public ResponseEntity<String> sendProjectInvitation(
+    		@RequestBody ProjectInvitationRequest request,
+    		@RequestHeader("Authorization") String jwt) throws Exception {
+        UserDTO userDTO = userService.findUserProfileByJwt(jwt);
+        invitationService.sendInvitation(request.getEmail(), request.getProjectId());
+        return ResponseEntity.ok("Project invitation sent");
+    }
+
+    @GetMapping("/accept_invitation")
+    public ResponseEntity<Void> acceptProjectInvitation(
+    		@RequestParam String token,
+    		@RequestHeader("Authorization") String jwt) throws Exception {
+        UserDTO userDTO = userService.findUserProfileByJwt(jwt);
+        invitationService.acceptInvitation(token, userDTO.getId());
+        return ResponseEntity.status(HttpStatus.ACCEPTED).build();
+    }
 }
