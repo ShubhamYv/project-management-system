@@ -11,4 +11,5 @@ public interface UserService {
 	UserDTO findUserById(Long userId) throws Exception;
 	
 	UserDTO updateUsersProjectSize(UserDTO userDTO, int number);
+
 }
