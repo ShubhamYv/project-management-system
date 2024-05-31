@@ -2,13 +2,11 @@ package com.sky.service;
 
 import com.sky.entity.Invitation;
 
-import jakarta.mail.MessagingException;
-
 public interface InvitationService {
 
-	void sendInvitation(String email, Long projectId) throws MessagingException;
+	void sendInvitation(String email, Long projectId);
 
-	Invitation acceptInvitation(String token, Long userId) throws Exception;
+	Invitation acceptInvitation(String token, Long userId);
 
 	String getTokenByUserEmail(String userEmail);
 	
