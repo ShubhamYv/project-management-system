@@ -4,14 +4,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import com.sky.constants.ErrorCodeEnum;
 import com.sky.dto.IssueDTO;
 import com.sky.dto.ProjectDTO;
 import com.sky.dto.UserDTO;
 import com.sky.entity.Issue;
 import com.sky.entity.Project;
 import com.sky.entity.User;
+import com.sky.exception.ProjectManagementException;
 import com.sky.repository.IssueRepository;
 import com.sky.service.IssueService;
 import com.sky.service.ProjectService;
@@ -20,12 +23,11 @@ import com.sky.service.UserService;
 @Service
 public class IssueServiceImpl implements IssueService {
 
-    private IssueRepository issueRepository;
-    private ModelMapper modelMapper;
-    private ProjectService projectService;
-    private UserService userService;
+    private final IssueRepository issueRepository;
+    private final ModelMapper modelMapper;
+    private final ProjectService projectService;
+    private final UserService userService;
 
-    
     public IssueServiceImpl(IssueRepository issueRepository, ModelMapper modelMapper,
                             ProjectService projectService, UserService userService) {
         this.issueRepository = issueRepository;
@@ -35,14 +37,18 @@ public class IssueServiceImpl implements IssueService {
     }
 
     @Override
-    public IssueDTO getIssueById(Long issueId) throws Exception {
+    public IssueDTO getIssueById(Long issueId) {
         Issue issue = issueRepository.findById(issueId)
-                .orElseThrow(() -> new Exception("Issue not found with ID: " + issueId));
+                .orElseThrow(() -> new ProjectManagementException(
+                        ErrorCodeEnum.ISSUE_NOT_FOUND.getErrorMessage(),
+                        ErrorCodeEnum.ISSUE_NOT_FOUND.getErrorCode(),
+                        HttpStatus.NOT_FOUND)
+                );
         return modelMapper.map(issue, IssueDTO.class);
     }
 
     @Override
-    public List<IssueDTO> getIssueByProjectId(Long projectId) throws Exception {
+    public List<IssueDTO> getIssueByProjectId(Long projectId) {
         List<Issue> allIssues = issueRepository.findByProjectID(projectId);
         return allIssues.stream()
                 .map(issue -> modelMapper.map(issue, IssueDTO.class))
@@ -50,8 +56,16 @@ public class IssueServiceImpl implements IssueService {
     }
 
     @Override
-    public IssueDTO createIssue(IssueDTO issueDTO, UserDTO userDTO) throws Exception {
-        ProjectDTO projectDTO = projectService.getProjectById(issueDTO.getProjectID());
+    public IssueDTO createIssue(IssueDTO issueDTO, UserDTO userDTO) {
+        ProjectDTO projectDTO;
+        try {
+            projectDTO = projectService.getProjectById(issueDTO.getProjectID());
+        } catch (Exception e) {
+            throw new ProjectManagementException(
+                    ErrorCodeEnum.PROJECT_NOT_FOUND.getErrorMessage(),
+                    ErrorCodeEnum.PROJECT_NOT_FOUND.getErrorCode(),
+                    HttpStatus.NOT_FOUND);
+        }
         Project project = modelMapper.map(projectDTO, Project.class);
         Issue issue = modelMapper.map(issueDTO, Issue.class);
         issue.setProject(project);
@@ -59,33 +73,35 @@ public class IssueServiceImpl implements IssueService {
         return modelMapper.map(createdIssue, IssueDTO.class);
     }
 
+
     @Override
-    public IssueDTO updateIssue(Long issueId, IssueDTO issueDTO, Long userId) throws Exception {
+    public IssueDTO updateIssue(Long issueId, IssueDTO issueDTO, Long userId) {
         Issue existingIssue = issueRepository.findById(issueId)
-                .orElseThrow(() -> new Exception("Issue not found with ID: " + issueId));
-
+                .orElseThrow(() -> new ProjectManagementException(
+                        ErrorCodeEnum.ISSUE_NOT_FOUND.getErrorMessage(),
+                        ErrorCodeEnum.ISSUE_NOT_FOUND.getErrorCode(),
+                        HttpStatus.NOT_FOUND)
+                );
         // Update fields from DTO
-        existingIssue.setTitle(issueDTO.getTitle());
-        existingIssue.setDescription(issueDTO.getDescription());
-        existingIssue.setStatus(issueDTO.getStatus());
-        existingIssue.setPriority(issueDTO.getPriority());
-        existingIssue.setDueDate(issueDTO.getDueDate());
-        existingIssue.setTags(issueDTO.getTags());
-
+        modelMapper.map(issueDTO, existingIssue);
         // Save and return updated issue
         Issue updatedIssue = issueRepository.save(existingIssue);
         return modelMapper.map(updatedIssue, IssueDTO.class);
     }
 
     @Override
-    public void deleteIssue(Long issueId, Long userId) throws Exception {
-        IssueDTO issueDTO = getIssueById(issueId);
-        Issue issue = modelMapper.map(issueDTO, Issue.class);
+    public void deleteIssue(Long issueId, Long userId) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ProjectManagementException(
+                        ErrorCodeEnum.ISSUE_NOT_FOUND.getErrorMessage(),
+                        ErrorCodeEnum.ISSUE_NOT_FOUND.getErrorCode(),
+                        HttpStatus.NOT_FOUND)
+                );
         issueRepository.delete(issue);
     }
 
     @Override
-    public List<IssueDTO> getIssueByAssigneeId(Long assigneeId) throws Exception {
+    public List<IssueDTO> getIssueByAssigneeId(Long assigneeId) {
         List<Issue> issues = issueRepository.findByAssigneeId(assigneeId);
         return issues.stream()
                 .map(issue -> modelMapper.map(issue, IssueDTO.class))
@@ -94,7 +110,7 @@ public class IssueServiceImpl implements IssueService {
 
     @Override
     public List<IssueDTO> searchIssues(String title, String status, String priority,
-                                       Long assigneeId) throws Exception {
+                                       Long assigneeId) {
         List<Issue> issues = issueRepository.search(title, status, priority, assigneeId);
         return issues.stream()
                 .map(issue -> modelMapper.map(issue, IssueDTO.class))
@@ -102,7 +118,7 @@ public class IssueServiceImpl implements IssueService {
     }
 
     @Override
-    public List<UserDTO> getAssigneeForIssue(Long issueId) throws Exception {
+    public List<UserDTO> getAssigneeForIssue(Long issueId) {
         List<User> assignees = issueRepository.findAssigneesByIssueId(issueId);
         return assignees.stream()
                 .map(assignee -> modelMapper.map(assignee, UserDTO.class))
@@ -110,7 +126,7 @@ public class IssueServiceImpl implements IssueService {
     }
 
     @Override
-    public IssueDTO addUserToIssue(Long issueId, Long userId) throws Exception {
+    public IssueDTO addUserToIssue(Long issueId, Long userId) {
         UserDTO userDTO = userService.findUserById(userId);
         IssueDTO issueDTO = getIssueById(issueId);
         Issue issue = modelMapper.map(issueDTO, Issue.class);
@@ -121,9 +137,13 @@ public class IssueServiceImpl implements IssueService {
     }
 
     @Override
-    public IssueDTO updateStatus(Long issueId, String status) throws Exception {
-        IssueDTO issueDTO = getIssueById(issueId);
-        Issue issue = modelMapper.map(issueDTO, Issue.class);
+    public IssueDTO updateStatus(Long issueId, String status) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ProjectManagementException(
+                        ErrorCodeEnum.ISSUE_NOT_FOUND.getErrorMessage(),
+                        ErrorCodeEnum.ISSUE_NOT_FOUND.getErrorCode(),
+                        HttpStatus.NOT_FOUND)
+                );
         issue.setStatus(status);
         Issue savedIssue = issueRepository.save(issue);
         return modelMapper.map(savedIssue, IssueDTO.class);

@@ -8,22 +8,22 @@ import com.sky.dto.UserDTO;
 
 public interface ProjectService {
 
-	ProjectDTO createProject(ProjectDTO projectDTO, UserDTO userDTO) throws Exception;
+	ProjectDTO createProject(ProjectDTO projectDTO, UserDTO userDTO);
 
-	List<ProjectDTO> getProjectByTeam(UserDTO userDTO, String category, String tag) throws Exception;
+	List<ProjectDTO> getProjectByTeam(UserDTO userDTO, String category, String tag);
 
-	ProjectDTO getProjectById(Long projectId) throws Exception;
+	ProjectDTO getProjectById(Long projectId);
 
-	void deleteProject(Long projectId, Long userId) throws Exception;
+	void deleteProject(Long projectId, Long userId);
 
-	ProjectDTO updateProject(ProjectDTO updatedProjectDTO, Long projectId) throws Exception;
+	ProjectDTO updateProject(ProjectDTO updatedProjectDTO, Long projectId);
 
-	void addUserToProject(Long projectId, Long userId) throws Exception;
+	void addUserToProject(Long projectId, Long userId);
 
-	void removeUserFromProject(Long projectId, Long userId) throws Exception;
+	void removeUserFromProject(Long projectId, Long userId);
 
-	ChatDTO getChatByProjectId(Long projectId) throws Exception;
-	
-	List<ProjectDTO> searchProject(String keyword, UserDTO userDTO) throws Exception;
+	ChatDTO getChatByProjectId(Long projectId);
+
+	List<ProjectDTO> searchProject(String keyword, UserDTO userDTO);
 
 }
