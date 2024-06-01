@@ -1,17 +1,28 @@
 package com.sky.controller;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.sky.dto.ChatDTO;
 import com.sky.dto.ProjectDTO;
 import com.sky.dto.UserDTO;
+import com.sky.pojo.ChatReqResp;
 import com.sky.pojo.ProjectInvitationRequest;
-import com.sky.pojo.ProjectRequest;
+import com.sky.pojo.ProjectReqResp;
 import com.sky.service.InvitationService;
 import com.sky.service.ProjectService;
 import com.sky.service.UserService;
@@ -34,74 +45,91 @@ public class ProjectController {
     }
 
     @PostMapping
-    public ResponseEntity<ProjectDTO> createProject(
-    		@RequestBody ProjectRequest projectRequest,
-    		@RequestHeader("Authorization") String jwt) throws Exception {
+    public ResponseEntity<ProjectReqResp> createProject(
+    		@RequestBody ProjectReqResp projectRequest,
+    		@RequestHeader("Authorization") String jwt) {
 
         ProjectDTO projectDTO = modelMapper.map(projectRequest, ProjectDTO.class);
         UserDTO userDTO = userService.findUserProfileByJwt(jwt);
         ProjectDTO createdProjectDTO = projectService.createProject(projectDTO, userDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdProjectDTO);
+        ProjectReqResp resp = modelMapper.map(createdProjectDTO, ProjectReqResp.class);
+        return ResponseEntity.status(HttpStatus.CREATED).body(resp);
     }
 
     @GetMapping
-    public ResponseEntity<List<ProjectDTO>> getProjects(
+    public ResponseEntity<List<ProjectReqResp>> getProjects(
     		@RequestParam(required = false) String category,
     		@RequestParam(required = false) String tag,
-    		@RequestHeader("Authorization") String jwt) throws Exception {
+    		@RequestHeader("Authorization") String jwt) {
 
         UserDTO userDTO = userService.findUserProfileByJwt(jwt);
         List<ProjectDTO> projectDTOs = projectService.getProjectByTeam(userDTO, category, tag);
-        return ResponseEntity.ok(projectDTOs);
+        
+        List<ProjectReqResp> projectReqResps = projectDTOs.stream()
+                .map(projectDTO -> modelMapper.map(projectDTO, ProjectReqResp.class))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(projectReqResps);
     }
 
     @GetMapping("{projectId}")
-    public ResponseEntity<ProjectDTO> getProjectById(
+    public ResponseEntity<ProjectReqResp> getProjectById(
     		@PathVariable Long projectId,
-    		@RequestHeader("Authorization") String jwt) throws Exception {
+    		@RequestHeader("Authorization") String jwt) {
+    	
         ProjectDTO projectDTO = projectService.getProjectById(projectId);
-        return ResponseEntity.ok(projectDTO);
+        ProjectReqResp response = modelMapper.map(projectDTO, ProjectReqResp.class);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{projectId}")
-    public ResponseEntity<ProjectDTO> updateProject(
-    		@RequestBody ProjectDTO projectDTO,
+    public ResponseEntity<ProjectReqResp> updateProject(
+    		@RequestBody ProjectReqResp projectRequest,
     		@PathVariable Long projectId,
-    		@RequestHeader("Authorization") String jwt) throws Exception {
+    		@RequestHeader("Authorization") String jwt) {
+    	
+    	ProjectDTO projectDTO = modelMapper.map(projectRequest, ProjectDTO.class);
         ProjectDTO updatedProjectDTO = projectService.updateProject(projectDTO, projectId);
-        return ResponseEntity.ok(updatedProjectDTO);
+        ProjectReqResp response = modelMapper.map(updatedProjectDTO, ProjectReqResp.class);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("{projectId}")
     public ResponseEntity<String> deleteProject(
     		@PathVariable Long projectId,
-    		@RequestHeader("Authorization") String jwt) throws Exception {
+    		@RequestHeader("Authorization") String jwt)  {
         UserDTO userDTO = userService.findUserProfileByJwt(jwt);
         projectService.deleteProject(projectId, userDTO.getId());
         return ResponseEntity.ok("Project " + projectId + " deleted successfully");
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<ProjectDTO>> searchProjects(
+    public ResponseEntity<List<ProjectReqResp>> searchProjects(
     		@RequestParam(required = false) String keyword,
-    		@RequestHeader("Authorization") String jwt) throws Exception {
+    		@RequestHeader("Authorization") String jwt) {
+    	
         UserDTO userDTO = userService.findUserProfileByJwt(jwt);
         List<ProjectDTO> projectDTOs = projectService.searchProject(keyword, userDTO);
-        return ResponseEntity.ok(projectDTOs);
+        List<ProjectReqResp> projectResponse = projectDTOs.stream()
+        		.map(projectDTO -> modelMapper.map(projectDTOs, ProjectReqResp.class))
+        		.collect(Collectors.toList());
+        return ResponseEntity.ok(projectResponse);
     }
 
     @GetMapping("/{projectId}/chat")
-    public ResponseEntity<ChatDTO> getChatProjectId(
+    public ResponseEntity<ChatReqResp> getChatProjectId(
     		@PathVariable Long projectId,
-    		@RequestHeader("Authorization") String jwt) throws Exception {
+    		@RequestHeader("Authorization") String jwt) {
+    	
         ChatDTO chatDTO = projectService.getChatByProjectId(projectId);
-        return ResponseEntity.ok(chatDTO);
+        ChatReqResp chatResponse = modelMapper.map(chatDTO, ChatReqResp.class);
+        return ResponseEntity.ok(chatResponse);
     }
 
     @PostMapping("/invite")
     public ResponseEntity<String> sendProjectInvitation(
     		@RequestBody ProjectInvitationRequest request,
-    		@RequestHeader("Authorization") String jwt) throws Exception {
+    		@RequestHeader("Authorization") String jwt) {
+    	
         UserDTO userDTO = userService.findUserProfileByJwt(jwt);
         invitationService.sendInvitation(request.getEmail(), request.getProjectId());
         return ResponseEntity.ok("Project invitation sent");
@@ -110,7 +138,8 @@ public class ProjectController {
     @GetMapping("/accept_invitation")
     public ResponseEntity<Void> acceptProjectInvitation(
     		@RequestParam String token,
-    		@RequestHeader("Authorization") String jwt) throws Exception {
+    		@RequestHeader("Authorization") String jwt) {
+    	
         UserDTO userDTO = userService.findUserProfileByJwt(jwt);
         invitationService.acceptInvitation(token, userDTO.getId());
         return ResponseEntity.status(HttpStatus.ACCEPTED).build();
