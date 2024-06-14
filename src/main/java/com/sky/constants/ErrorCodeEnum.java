@@ -31,7 +31,13 @@ public enum ErrorCodeEnum {
     INVALID_INVITATION_TOKEN("10301", "Invalid invitation token"),
     
     // Project Related
-    PROJECT_NOT_FOUND("10401", "Project not found with the provided details");
+    PROJECT_NOT_FOUND("10401", "Project not found with the provided details"),
+	
+    // Comment Related
+    COMMENT_NOT_FOUND("10500", "Comment not found"),
+    COMMENT_SAVE_FAILED("10501", "Failed to save comment"),
+    COMMENT_UPDATE_FAILED("10502", "Failed to update comment"),
+    COMMENT_DELETE_FAILED("10503", "User does not have permission to delete this comment!");
 
     @Getter
     private final String errorCode;
