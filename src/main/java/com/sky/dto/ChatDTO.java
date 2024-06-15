@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ChatDTO {
 
+	private Long id;
     private String name;
     private List<MessageDTO> messages = new ArrayList<>();
 }
