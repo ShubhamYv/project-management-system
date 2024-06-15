@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.sky.constants.ErrorCodeEnum;
+import com.sky.constants.SubscriptionConstants;
 import com.sky.dto.SubscriptionDTO;
 import com.sky.dto.UserDTO;
 import com.sky.entity.PlanType;
@@ -33,7 +34,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         Subscription subscription = new Subscription();
         subscription.setUser(user);
         subscription.setSubscriptionStartDate(LocalDate.now());
-        subscription.setSubscriptionEndDate(LocalDate.now().plusMonths(12));
+        subscription.setSubscriptionEndDate(LocalDate.now()
+        		.plusMonths(SubscriptionConstants.DEFAULT_SUBSCRIPTION_MONTHS));
         subscription.setValid(true);
         subscription.setPlanType(PlanType.FREE);
         Subscription savedSubscription = subscriptionRepository.save(subscription);
@@ -46,12 +48,13 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         if (subscription == null) {
             throw new ProjectManagementException(
             		ErrorCodeEnum.SUBSCRIPTION_NOT_FOUND.getErrorCode(), 
-                    ErrorCodeEnum.SUBSCRIPTION_NOT_FOUND.getErrorMessage(), 
+                    ErrorCodeEnum.SUBSCRIPTION_NOT_FOUND.getErrorMessage(),
                     HttpStatus.NOT_FOUND);
         }
         if (!isValid(subscription)) {
             subscription.setPlanType(PlanType.FREE);
-            subscription.setSubscriptionEndDate(LocalDate.now().plusMonths(12));
+            subscription.setSubscriptionEndDate(LocalDate.now()
+            		.plusMonths(SubscriptionConstants.DEFAULT_SUBSCRIPTION_MONTHS));
             subscription.setSubscriptionStartDate(LocalDate.now());
             subscription = subscriptionRepository.save(subscription);
         }
@@ -64,16 +67,18 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         if (subscription == null) {
             throw new ProjectManagementException(
             		ErrorCodeEnum.SUBSCRIPTION_NOT_FOUND.getErrorCode(), 
-                    ErrorCodeEnum.SUBSCRIPTION_NOT_FOUND.getErrorMessage(), 
+            		ErrorCodeEnum.SUBSCRIPTION_NOT_FOUND.getErrorMessage(),
                     HttpStatus.NOT_FOUND);
         }
         subscription.setPlanType(planType);
         subscription.setSubscriptionStartDate(LocalDate.now());
 
         if (planType.equals(PlanType.ANNUALLY)) {
-            subscription.setSubscriptionEndDate(LocalDate.now().plusMonths(12));
+            subscription.setSubscriptionEndDate(LocalDate.now()
+            		.plusMonths(SubscriptionConstants.DEFAULT_SUBSCRIPTION_MONTHS));
         } else {
-            subscription.setSubscriptionEndDate(LocalDate.now().plusMonths(1));
+            subscription.setSubscriptionEndDate(LocalDate.now()
+            		.plusMonths(SubscriptionConstants.DEFAULT_UPGRADE_MONTHS));
         }
         Subscription savedSubscription = subscriptionRepository.save(subscription);
         return modelMapper.map(savedSubscription, SubscriptionDTO.class);
