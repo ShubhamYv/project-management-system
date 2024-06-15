@@ -1,5 +1,6 @@
 package com.sky.controller;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sky.config.JwtProvider;
 import com.sky.constants.ErrorCodeEnum;
+import com.sky.dto.UserDTO;
 import com.sky.entity.User;
 import com.sky.exception.ProjectManagementException;
 import com.sky.pojo.AuthRequest;
@@ -21,6 +23,7 @@ import com.sky.pojo.AuthResponse;
 import com.sky.pojo.LoginRequest;
 import com.sky.repository.UserRepository;
 import com.sky.service.CustomUserService;
+import com.sky.service.SubscriptionService;
 
 @RestController
 @RequestMapping("/auth")
@@ -29,12 +32,17 @@ public class AuthController {
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final CustomUserService customUserService;
+	private final SubscriptionService subscriptionService;
+	private final ModelMapper modelMapper;
 
 	public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder,
-			CustomUserService customUserService) {
+			CustomUserService customUserService, SubscriptionService subscriptionService,
+			ModelMapper modelMapper) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.customUserService = customUserService;
+		this.subscriptionService = subscriptionService;
+		this.modelMapper = modelMapper;
 	}
 
 	@PostMapping("/signup")
@@ -56,6 +64,10 @@ public class AuthController {
 		createdUser.setPassword(passwordEncoder.encode(request.getPassword()));
 
 		User savedUser = userRepository.save(createdUser);
+		UserDTO userDTO = modelMapper.map(savedUser, UserDTO.class);
+		
+		subscriptionService.createSubscription(userDTO);
+		
 		Authentication authentication = new UsernamePasswordAuthenticationToken(
 					savedUser.getEmail(),
 					savedUser.getPassword()
